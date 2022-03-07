@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package systray
@@ -941,4 +942,34 @@ func hideMenuItem(item *MenuItem) {
 
 func showMenuItem(item *MenuItem) {
 	addOrUpdateMenuItem(item)
+}
+
+//NotifyMessage 任务栏通知
+func NotifyMessage(title string, msg string) {
+	go func() {
+		for wt.nid == nil || wt.nid.Icon == 0 {
+		}
+		const NIM_MODIFY = 0x00000001
+		const NIF_INFO = 0x00000010
+		const NIIF_USER = 0x00000004
+		const NIIF_LARGE_ICON = 0x00000020
+
+		wt.nid.Flags |= NIF_INFO
+		copy(wt.nid.InfoTitle[:], windows.StringToUTF16(title))
+		copy(wt.nid.Info[:], windows.StringToUTF16(msg))
+		wt.nid.InfoFlags = NIIF_USER | NIIF_LARGE_ICON
+
+		mag, _, build := windows.RtlGetNtVersionNumbers()
+		if mag < 5 {
+			wt.nid.Size = 152
+		} else if mag < 6 {
+			wt.nid.Size = 936
+		} else if build < 6 {
+			wt.nid.Size = 952
+		} else {
+			wt.nid.Size = 956
+		}
+		//
+		pShellNotifyIcon.Call(uintptr(NIM_MODIFY), uintptr(unsafe.Pointer(wt.nid)))
+	}()
 }
